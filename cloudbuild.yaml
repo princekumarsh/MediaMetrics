@@ -1,14 +1,56 @@
-steps:
-  # Step 1: Build Docker image
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/media:$COMMIT_SHA', '.']
+options:
+  logging: CLOUD_LOGGING_ONLY   # Force logs to Cloud Logging
 
-  # Step 2: Push to GCR
+steps:
+  # Step 0: Debug start info
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        echo "🔵 Build started..."
+        echo "Commit: $COMMIT_SHA"
+        echo "Project: $PROJECT_ID"
+        echo "Service Account: $(gcloud auth list --filter=status:ACTIVE --format='value(account)')"
+        echo "=============================="
+
+  # Step 1: Build Docker image with logging
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/media:$COMMIT_SHA']
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        echo "🛠 Starting Docker build..."
+        if docker build -t gcr.io/$PROJECT_ID/media:$COMMIT_SHA .; then
+          echo "✅ Docker build completed successfully."
+        else
+          echo "❌ Docker build FAILED!"
+          exit 1
+        fi
+
+  # Step 2: Push Docker image with logging
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        echo "📤 Pushing image to GCR..."
+        if docker push gcr.io/$PROJECT_ID/media:$COMMIT_SHA; then
+          echo "✅ Image pushed successfully."
+        else
+          echo "❌ Image push FAILED!"
+          exit 1
+        fi
+
+  # Step 3: Confirm pushed image
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        echo "🔍 Latest image tags for media:"
+        gcloud container images list-tags gcr.io/$PROJECT_ID/media --limit=5
+        echo "🏁 Build finished."
 
 images:
   - 'gcr.io/$PROJECT_ID/media:$COMMIT_SHA'
-
-options:
-  logging: CLOUD_LOGGING_ONLY
