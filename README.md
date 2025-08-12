@@ -8,3 +8,5 @@ A DevOps demo project to monitor OTT metrics using FastAPI, Docker, GitHub Actio
 - GitHub Actions CI/CD
 - Kubernetes deployment via Helm
 - EKS provisioning with Terraform
+
+#testingcloudyaml
